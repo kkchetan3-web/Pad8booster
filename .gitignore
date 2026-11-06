@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Test / tooling caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local artefacts users create by running the toolkit
+before.json
+after.json
+a1.json
+bench-*.json
+report*.md
+!docs/*.md
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

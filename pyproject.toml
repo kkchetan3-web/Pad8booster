@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pad8booster"
+version = "1.0.0"
+description = "Measurement-first optimisation toolkit for the Xiaomi Pad 8 / Pad 8 Pro"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+keywords = ["android", "xiaomi", "hyperos", "adb", "shizuku", "performance", "optimisation"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+pad8booster = "pad8booster.cli:main"
+
+[tool.setuptools]
+packages = ["pad8booster"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
