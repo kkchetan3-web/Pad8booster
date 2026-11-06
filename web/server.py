@@ -103,7 +103,11 @@ def build_payload() -> dict:
 class Handler(BaseHTTPRequestHandler):
     server_version = f"Pad8Booster/{__version__}"
 
-    def _send(self, status: int, body: bytes, content_type: str) -> None:
+    # Keep-alive needs a Content-Length on every response, which _send always
+    # sets. HTTP/1.1 also stops proxies treating each asset as a new connection.
+    protocol_version = "HTTP/1.1"
+
+    def _send(self, status: int, body: bytes, content_type: str, *, head: bool = False) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
@@ -112,20 +116,31 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if not head:
+            self.wfile.write(body)
 
-    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
+    def _route(self, *, head: bool) -> None:
         path = urlparse(self.path).path
         if path in ("/", "/index.html"):
             html = (ROOT / "index.html").read_bytes()
-            self._send(200, html, "text/html; charset=utf-8")
+            self._send(200, html, "text/html; charset=utf-8", head=head)
         elif path == "/api/state":
             body = json.dumps(build_payload(), default=str).encode()
-            self._send(200, body, "application/json")
+            self._send(200, body, "application/json", head=head)
         elif path == "/healthz":
-            self._send(200, b'{"ok":true}', "application/json")
+            self._send(200, b'{"ok":true}', "application/json", head=head)
+        elif path == "/favicon.ico":
+            # Inline 1x1 transparent GIF; avoids a 404 in every proxy log.
+            icon = bytes.fromhex("47494638396101000100800000ffffff00000021f90401000000002c00000000010001000002024401003b")
+            self._send(200, icon, "image/gif", head=head)
         else:
-            self._send(404, b'{"error":"not found"}', "application/json")
+            self._send(404, b'{"error":"not found"}', "application/json", head=head)
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
+        self._route(head=False)
+
+    def do_HEAD(self) -> None:  # noqa: N802 - proxy/uptime health checks use HEAD
+        self._route(head=True)
 
     def log_message(self, fmt: str, *args) -> None:  # quieter logs
         sys.stderr.write("[dashboard] " + fmt % args + "\n")
