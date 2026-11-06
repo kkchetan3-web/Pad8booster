@@ -11,16 +11,14 @@ import json
 import threading
 import urllib.error
 import urllib.request
-from http.server import ThreadingHTTPServer
-
 import pytest
 
-from web.server import Handler
+from web.server import DashboardServer, Handler
 
 
 @pytest.fixture(scope="module")
 def base_url():
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = DashboardServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     host, port = server.server_address[:2]
@@ -88,3 +86,8 @@ def test_unknown_path_is_404(base_url):
 def test_cors_header_allows_preview_proxy(base_url):
     _, headers, _ = _get(base_url + "/api/state")
     assert headers["Access-Control-Allow-Origin"] == "*"
+
+
+def test_server_has_a_proxy_sized_backlog():
+    """The default backlog of 5 resets connections when a proxy parallelises."""
+    assert DashboardServer.request_queue_size >= 64

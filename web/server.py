@@ -100,6 +100,20 @@ def build_payload() -> dict:
         return {"mode": "error", "error": str(exc), "version": __version__}
 
 
+class DashboardServer(ThreadingHTTPServer):
+    """Threaded HTTP server tuned for being proxied.
+
+    socketserver's default accept backlog is 5. A preview proxy loads the page and
+    its assets over several parallel sockets, and a slow client can fill a queue
+    that small — producing intermittent connection resets that look like an app
+    bug. 128 is cheap insurance.
+    """
+
+    request_queue_size = 128
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = f"Pad8Booster/{__version__}"
 
@@ -154,7 +168,7 @@ def main() -> int:
     parser.add_argument("--live", action="store_true", help="use a connected device")
     args = parser.parse_args()
     LIVE = args.live
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    server = DashboardServer((args.host, args.port), Handler)
     mode = "live device" if LIVE else "synthetic demo data"
     print(f"Pad8Booster dashboard on http://{args.host}:{args.port} ({mode})")
     try:
