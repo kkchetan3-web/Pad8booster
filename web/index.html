@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pad8Booster — Xiaomi Pad 8 optimisation console</title>
+<style>
+  :root {
+    --bg: #0b0d0f;
+    --panel: #13171a;
+    --panel-2: #181d21;
+    --line: #242b30;
+    --text: #e6ecef;
+    --muted: #8a9aa3;
+    --accent: #4ade80;
+    --accent-dim: #1b3a2a;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --info: #60a5fa;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 22px 72px; }
+  header { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+           justify-content: space-between; border-bottom: 1px solid var(--line);
+           padding-bottom: 18px; margin-bottom: 24px; }
+  .wordmark { font-family: var(--mono); font-size: 21px; letter-spacing: -0.4px; font-weight: 700; }
+  .wordmark span { color: var(--accent); }
+  .tagline { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge { font-family: var(--mono); font-size: 11px; padding: 4px 9px; border-radius: 4px;
+           border: 1px solid var(--line); color: var(--muted); background: var(--panel); }
+  .badge.demo { color: var(--warn); border-color: #4a3d12; background: #201a08; }
+  .badge.live { color: var(--accent); border-color: #1e4530; background: #0c1f15; }
+  .badge.err { color: var(--bad); border-color: #4a1f1f; background: #200d0d; }
+
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.4px; color: var(--muted);
+       font-weight: 600; margin: 34px 0 12px; }
+  .grid { display: grid; gap: 14px; }
+  .cols-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .cols-4 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 16px; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+  .card .sub { color: var(--muted); font-size: 12px; }
+
+  .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 11px 13px; }
+  .chip .k { font-size: 10.5px; letter-spacing: 0.9px; text-transform: uppercase; color: var(--muted); }
+  .chip .v { font-family: var(--mono); font-size: 13.5px; margin-top: 3px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px;
+       text-transform: uppercase; letter-spacing: 0.8px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px; border-bottom: 1px solid #1b2126; vertical-align: top; }
+  td.mono, .mono { font-family: var(--mono); }
+  tr:last-child td { border-bottom: none; }
+
+  /* metric bars */
+  .metric { display: grid; grid-template-columns: 168px 1fr 84px; gap: 12px;
+            align-items: center; padding: 9px 0; border-bottom: 1px solid #1b2126; }
+  .metric:last-child { border-bottom: none; }
+  .metric .label { font-size: 12.5px; color: #c3ced4; }
+  .metric .label small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .bars { display: flex; flex-direction: column; gap: 4px; }
+  .bar { height: 7px; border-radius: 3px; background: #202830; position: relative; overflow: hidden; }
+  .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; display: block; }
+  .bar.b i { background: #55636d; }
+  .bar.a i { background: var(--accent); }
+  .bar.a.regressed i { background: var(--bad); }
+  .pill { font-family: var(--mono); font-size: 11px; text-align: right; padding: 2px 7px;
+          border-radius: 20px; border: 1px solid var(--line); white-space: nowrap; }
+  .pill.improved { color: var(--accent); border-color: #1e4530; background: var(--accent-dim); }
+  .pill.regressed { color: var(--bad); border-color: #4a1f1f; background: #200d0d; }
+  .pill.flat { color: var(--muted); }
+
+  .status { font-family: var(--mono); font-size: 10.5px; padding: 2px 7px; border-radius: 4px;
+            border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .status.applied, .status.dry-run { color: var(--info); border-color: #1e3550; background: #0c1621; }
+  .status.rejected, .status.error { color: var(--bad); border-color: #4a1f1f; background: #200d0d; }
+  .status.already-set, .status.restored { color: var(--accent); border-color: #1e4530; background: var(--accent-dim); }
+
+  .risk { font-family: var(--mono); font-size: 10.5px; padding: 2px 6px; border-radius: 4px; }
+  .risk.safe { color: var(--accent); background: var(--accent-dim); }
+  .risk.caution { color: var(--warn); background: #201a08; }
+
+  .honest { border-left: 3px solid var(--warn); background: #171408; }
+  .honest li { margin-bottom: 7px; color: #d8d2c2; }
+  ul { margin: 6px 0 0; padding-left: 18px; }
+  code { font-family: var(--mono); background: #1c2228; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  pre { font-family: var(--mono); background: #0e1215; border: 1px solid var(--line);
+        border-radius: 7px; padding: 13px; overflow-x: auto; font-size: 12px; color: #cfe3d6; }
+  a { color: var(--info); }
+  .foot { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line);
+          color: var(--muted); font-size: 11.5px; }
+  .loading { color: var(--muted); font-family: var(--mono); padding: 40px 0; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12.5px;
+        border-bottom: 1px solid #1b2126; }
+  .kv:last-child { border-bottom: none; }
+  .kv span:last-child { font-family: var(--mono); color: #c3ced4; text-align: right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="wordmark">PAD8<span>BOOSTER</span></div>
+      <div class="tagline">Measurement-first optimisation console · Xiaomi Pad 8 / Pad 8 Pro · no root required</div>
+    </div>
+    <div class="badges" id="badges"><span class="badge">connecting…</span></div>
+  </header>
+
+  <div id="app"><div class="loading">reading device state…</div></div>
+
+  <div class="foot">
+    Pad8Booster is a read-measure-verify loop, not a one-tap "cleaner". Every number
+    shown is produced by the parsers in <code>pad8booster/metrics.py</code>; nothing is
+    hardcoded. Run it against your own tablet with <code>python -m pad8booster probe</code>.
+  </div>
+</div>
+
+<script>
+const fmt = (v, unit = "") => (v === null || v === undefined) ? "unavailable" : `${v}${unit}`;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function pill(verdict, delta) {
+  const txt = (delta === null || delta === undefined) ? "—" : `${delta > 0 ? "+" : ""}${delta}%`;
+  return `<span class="pill ${verdict}">${txt}</span>`;
+}
+
+function metricRows(delta) {
+  const rows = delta.rows.map(r => {
+    const max = Math.max(Math.abs(r.before ?? 0), Math.abs(r.after ?? 0), 1);
+    const bw = r.before === null ? 0 : Math.min(100, Math.abs(r.before) / max * 100);
+    const aw = r.after === null ? 0 : Math.min(100, Math.abs(r.after) / max * 100);
+    const reg = r.verdict === "regressed" ? "regressed" : "";
+    return `<div class="metric">
+      <div class="label">${esc(r.metric)}<small>${fmt(r.before, " " + r.unit).trim()} → ${fmt(r.after, " " + r.unit).trim()}</small></div>
+      <div class="bars">
+        <div class="bar b"><i style="width:${bw}%"></i></div>
+        <div class="bar a ${reg}"><i style="width:${aw}%"></i></div>
+      </div>
+      ${pill(r.verdict, r.delta_pct)}
+    </div>`;
+  }).join("");
+  return `<div class="card">
+    <h3>Device state: ${esc(delta.before_label)} vs ${esc(delta.after_label)}</h3>
+    <div class="sub">Grey bar = before, coloured bar = after, scaled per metric. ${delta.measured} of ${delta.rows.length} metrics were readable on this build.</div>
+    <div style="margin-top:12px">${rows}</div>
+  </div>`;
+}
+
+function benchCard(bench) {
+  if (!bench || !bench.length) {
+    return `<div class="card"><h3>Cold-start benchmark</h3>
+      <div class="sub">Unavailable in live mode — run <code>python -m pad8booster bench --package com.android.chrome</code> twice and compare.</div></div>`;
+  }
+  const b = bench[0];
+  return `<div class="card">
+    <h3>Cold-start benchmark · <span class="mono">${esc(b.package)}</span></h3>
+    <div class="sub">Median of 5 cold starts after <code>am force-stop</code>. Noise band ±${fmt(b.noise_band_ms, " ms")}.</div>
+    <div class="kv"><span>Before median</span><span>${fmt(b.before_median_ms, " ms")}</span></div>
+    <div class="kv"><span>After median</span><span>${fmt(b.after_median_ms, " ms")}</span></div>
+    <div class="kv"><span>Delta</span><span>${b.delta_pct > 0 ? "+" : ""}${fmt(b.delta_pct, "%")}</span></div>
+    <div class="kv"><span>Speed-up</span><span>${b.speedup_x ? b.speedup_x + "×" : "—"}</span></div>
+    <div class="kv"><span>Verdict</span><span>${esc(b.verdict)}</span></div>
+    <div class="sub" style="margin-top:10px">A delta smaller than the noise band is reported as <code>within-noise</code>, never as a win.</div>
+  </div>`;
+}
+
+function profileCard(profile) {
+  const rows = profile.results.map(r => `<tr>
+      <td>${esc(r.description)}</td>
+      <td class="mono">${esc(r.target)}</td>
+      <td><span class="status ${esc(r.status)}">${esc(r.status)}</span></td>
+    </tr>`).join("");
+  return `<div class="card">
+    <h3>Profile preview · <span class="mono">${esc(profile.name)}</span></h3>
+    <div class="sub">${esc(profile.summary)}</div>
+    <table style="margin-top:12px"><thead><tr><th>Action</th><th>Target</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <div class="sub" style="margin-top:10px"><strong>caveat:</strong> ${esc(profile.caveat)}</div>
+  </div>`;
+}
+
+function catalogueCard(cat) {
+  const safe = cat.safe_plan;
+  const list = safe.map(a => `<tr>
+      <td class="mono">${esc(a.package)}</td>
+      <td>${esc(a.name)}</td>
+      <td><span class="risk ${esc(a.risk)}">${esc(a.risk)}</span></td>
+      <td class="sub">${esc(a.note)}</td>
+    </tr>`).join("");
+  return `<div class="card">
+    <h3>Debloat plan · ${safe.length} safe candidates on this device</h3>
+    <div class="sub">${cat.protected_count} packages are hard-protected and cannot be removed by any flag. Removal is per-user (<code>pm uninstall --user 0</code>), fully reversible with <code>debloat restore</code>.</div>
+    <table style="margin-top:12px"><thead><tr><th>Package</th><th>App</th><th>Risk</th><th>Why</th></tr></thead>
+    <tbody>${list}</tbody></table>
+  </div>`;
+}
+
+function honestyCard(delta) {
+  const missing = delta.rows.filter(r => r.before === null && r.after === null).map(r => r.metric);
+  return `<div class="card honest">
+    <h3 style="color:var(--warn)">What this does not claim</h3>
+    <ul>
+      <li><strong>No "20× faster" claims.</strong> Debloating and profile tuning move real
+          metrics by single-digit to low-double-digit percentages. Any tool promising
+          a multiplier is measuring something other than your workload.</li>
+      <li><strong>No root, no custom ROM.</strong> HyperOS 3 bootloader unlocks are quota-gated
+          and impractical on a new device, so this toolkit only uses APIs available to
+          every owner: ADB, Shizuku, and the settings/package managers.</li>
+      <li><strong>No kernel or governor tuning.</strong> CPU frequency scaling is not writable
+          from userspace on a locked device. Fixed-performance mode is the one legitimate
+          exception, and it costs battery and heat.</li>
+      ${missing.length ? `<li><strong>Not measurable on this device:</strong> ${missing.map(esc).join(", ")}.</li>` : ""}
+    </ul>
+  </div>`;
+}
+
+function render(d) {
+  const app = document.getElementById("app");
+  const badges = document.getElementById("badges");
+  if (d.mode === "error") {
+    badges.innerHTML = `<span class="badge err">error</span>`;
+    app.innerHTML = `<div class="card"><h3>Could not read device</h3><pre>${esc(d.error)}</pre></div>`;
+    return;
+  }
+  badges.innerHTML = `
+    <span class="badge ${d.mode === 'demo' ? 'demo' : 'live'}">${d.mode === 'demo' ? 'DEMO DATA — synthetic' : 'LIVE DEVICE'}</span>
+    <span class="badge">${esc(d.device.model || 'unknown device')}</span>
+    <span class="badge">${esc(d.device.soc_model || '?')}</span>
+    <span class="badge">Android ${esc(d.device.release || '?')}</span>
+    <span class="badge">v${esc(d.version)}</span>`;
+
+  const dev = d.device;
+  const chips = [
+    ["SoC", `${dev.soc_manufacturer} ${dev.soc_model}`],
+    ["HyperOS build", dev.incremental],
+    ["Security patch", dev.security_patch],
+    ["ABI", dev.abi],
+    ["Density", dev.density + " dpi"],
+    ["Verification", `${d.verification.confidence} — ${d.verification.is_pad8 ? "pass" : "fail"}`],
+  ].map(([k, v]) => `<div class="chip"><div class="k">${esc(k)}</div><div class="v">${esc(v || '—')}</div></div>`).join("");
+
+  const caps = Object.entries(d.capabilities).map(([k, v]) =>
+    `<div class="kv"><span>${esc(k.replace(/_/g, ' '))}</span><span>${v ? 'available' : 'unavailable'}</span></div>`).join("");
+
+  app.innerHTML = `
+    <h2>Hardware</h2>
+    <div class="grid cols-4">${chips}</div>
+
+    <h2>Measured state</h2>
+    <div class="grid cols-2">${metricRows(d.delta)}${benchCard(d.bench)}</div>
+
+    <h2>Tuning</h2>
+    <div class="grid cols-2">${profileCard(d.profile)}
+      <div class="card"><h3>Capability probe</h3>
+        <div class="sub">Optional interfaces are detected, not assumed. Unavailable ones are skipped rather than half-applied.</div>
+        <div style="margin-top:10px">${caps}</div>
+      </div>
+    </div>
+
+    <h2>Debloat</h2>
+    ${catalogueCard(d.catalogue)}
+
+    <h2>Honesty</h2>
+    ${honestyCard(d.delta)}
+
+    <h2>Apply it to your own tablet</h2>
+    <div class="card">
+      <pre>pip install -e .
+python -m pad8booster probe
+python -m pad8booster snapshot --label before --out before.json
+python -m pad8booster debloat apply --tags battery privacy --yes
+python -m pad8booster profile apply responsive --yes
+python -m pad8booster snapshot --label after --out after.json
+python -m pad8booster compare before.json after.json --out report.md
+python -m pad8booster revert --yes      # undo everything, from the journal</pre>
+    </div>`;
+}
+
+fetch("api/state").then(r => r.json()).then(render).catch(err => {
+  document.getElementById("app").innerHTML =
+    `<div class="card"><h3>Dashboard could not reach its API</h3><pre>${esc(err)}</pre></div>`;
+});
+</script>
+</body>
+</html>
