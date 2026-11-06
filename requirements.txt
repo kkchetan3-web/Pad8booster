@@ -1,0 +1,6 @@
+# Pad8Booster has no runtime dependencies - the standard library is enough.
+# This file exists so tooling has something to read; install with:
+#   pip install -e .
+#
+# Development only:
+pytest>=7
