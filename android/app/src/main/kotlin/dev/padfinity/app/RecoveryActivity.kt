@@ -26,7 +26,7 @@ import dev.padfinity.app.ui.theme.PadfinityTheme
  * It clears the desktop layout and any app-level tuning state. It deliberately
  * does NOT try to "restore system settings" here: system-level changes made via
  * Shizuku are journalled and reverted by the host-side tool
- * (`python8booster revert`) or from Settings → Advanced, because doing shell work
+ * (`pad8booster revert`) or from Settings → Advanced, because doing shell work
  * from a recovery screen without an authorised session would be exactly the kind
  * of silent mutation this project refuses to do.
  */
